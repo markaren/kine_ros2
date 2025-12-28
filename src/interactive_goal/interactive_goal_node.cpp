@@ -24,7 +24,11 @@ public:
         server_->applyChanges();
     }
 
-    void makeMarker()
+private:
+    std::shared_ptr<interactive_markers::InteractiveMarkerServer> server_;
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr goal_pub_;
+
+    void makeMarker() const
     {
         visualization_msgs::msg::InteractiveMarker int_marker;
         int_marker.header.frame_id = "world";
@@ -35,19 +39,8 @@ public:
         int_marker.pose.position.z = 5;
         int_marker.scale = 1.0;
 
-        visualization_msgs::msg::Marker box;
-        box.type = visualization_msgs::msg::Marker::CUBE;
-        box.scale.x = 0.3;
-        box.scale.y = 0.3;
-        box.scale.z = 0.3;
-        box.color.r = 0.0;
-        box.color.g = 0.7;
-        box.color.b = 0.2;
-        box.color.a = 0.9;
-
         visualization_msgs::msg::InteractiveMarkerControl control_vis;
         control_vis.always_visible = true;
-        control_vis.markers.push_back(box);
         int_marker.controls.push_back(control_vis);
 
         visualization_msgs::msg::InteractiveMarkerControl control;
@@ -106,10 +99,6 @@ public:
                 server_->applyChanges();
             });
     }
-
-
-    std::shared_ptr<interactive_markers::InteractiveMarkerServer> server_;
-    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr goal_pub_;
 };
 
 int main(int argc, char** argv)
