@@ -133,30 +133,32 @@ public:
             "set_joint_values", 10,
             [this](std_msgs::msg::Float32MultiArray::SharedPtr msg)
             {
-                if (msg->data.size() != 3)
+                if (msg->data.size() != robot_->numDOF())
                 {
                     RCLCPP_WARN(KineEnvironmentNode::get_logger(),
-                                "set_joint_values expects 3 elements, got %zu",
-                                msg->data.size());
+                                "set_joint_values expects %i elements, got %zu",
+                                robot_->numDOF(), msg->data.size());
                     return;
                 }
 
-                robot_->setJointValue(0, msg->data[0]);
-                robot_->setJointValue(1, msg->data[1]);
-                robot_->setJointValue(2, msg->data[2]);
+                robot_->setJointValues(msg->data);
             });
 
+        const auto info = robot_->getArticulatedJointInfo();
+        std::ranges::transform(info, std::back_inserter(jointNames_), [](const auto& ji)
+        {
+            return ji.name;
+        });
+
         // publish joint states at 50 Hz via a ROS timer (runs when executor spins)
-        publish_timer_ = this->create_wall_timer(20ms, [this]()
+        publish_timer_ = this->create_wall_timer(20ms, [this]
         {
             sensor_msgs::msg::JointState js;
             js.header.stamp = this->now();
-            js.name = {"base_joint", "boom_joint", "jib_joint"};
-            js.position.resize(3);
-            const auto values = robot_->jointValues();
-            js.position[0] = values[0];
-            js.position[1] = values[1];
-            js.position[2] = values[2];
+            js.name = jointNames_;
+            js.position.resize(robot_->numDOF());
+            auto values = robot_->jointValues();
+            std::ranges::copy(values, js.position.begin());
             joint_pub_->publish(js);
         });
     }
@@ -165,7 +167,7 @@ public:
     {
         sensor_msgs::msg::Image img;
         img.header.stamp = this->now();
-        img.header.frame_id = "camera"; // set appropriate frame
+        img.header.frame_id = "camera";
         img.height = static_cast<uint32_t>(textureSize);
         img.width = static_cast<uint32_t>(textureSize);
         img.encoding = "rgb8";
@@ -211,12 +213,32 @@ public:
         EndEffectorTrail trail;
         scene_.add(trail);
 
+        IOCapture capture{};
+        capture.preventMouseEvent = [] {
+            return ImGui::GetIO().WantCaptureMouse;
+        };
+        canvas_.setIOCapture(&capture);
+
         bool showCameraHelper = true;
         ImguiFunctionalContext ui(canvas_.windowPtr(), [&]
         {
-            ImGui::SetNextWindowPos({});
+            ImGui::SetNextWindowPos({}, 0, {});
+            ImGui::SetNextWindowSize({}, 0);
+
             ImGui::Begin("Settings");
             ImGui::Checkbox("Show Camera Helper", &showCameraHelper);
+            ImGui::Text("Joint Values:");
+            auto jointValues = robot_->jointValues();
+            const auto limits = robot_->getJointRanges();
+            bool jointValuesChanged = false;
+            for (size_t i = 0; i < jointValues.size(); ++i)
+            {
+                jointValuesChanged = jointValuesChanged || ImGui::SliderFloat(jointNames_[i].c_str(), &jointValues[i], limits[i].min, limits[i].max);
+            }
+            if (jointValuesChanged)
+            {
+                robot_->setJointValues(jointValues);
+            }
             ImGui::End();
         });
 
@@ -233,6 +255,8 @@ public:
             cameraHelper->visible = showCameraHelper;
             renderer_.render(scene_, camera_);
 
+            ui.render();
+
             renderer_.clearDepth();
             renderer_.setViewport({0, 0}, {128, 128});
             renderer_.render(orthoScene, orthoCamera);
@@ -247,8 +271,6 @@ public:
             flipImage(pixels, 3, textureSize, textureSize);
 
             publishImage(textureSize, pixels.data());
-
-            ui.render();
         });
     }
 
@@ -270,6 +292,7 @@ private:
     PerspectiveCamera camera_;
     Scene scene_;
     std::shared_ptr<Robot> robot_;
+    std::vector<std::string> jointNames_;
 
     rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_pub_;
