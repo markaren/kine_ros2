@@ -1,5 +1,4 @@
 
-#include <array>
 #include <cmath>
 #include <memory>
 #include <mutex>
@@ -23,6 +22,10 @@ class KineControlNode : public rclcpp::Node
 public:
     KineControlNode() : Node("kine_control_node")
     {
+        robot_ = loadRobot();
+        current_joints_.resize(robot_->numDOF());
+        RCLCPP_INFO(get_logger(), "Loaded URDF robot with %zu DOF", robot_->numDOF());
+
         set_joint_pub_ = this->create_publisher<std_msgs::msg::Float32MultiArray>(
             "set_joint_values", 10);
 
@@ -33,8 +36,6 @@ public:
                 this->processFeedback2(*msg);
             });
 
-        robot_ = loadRobot();
-        RCLCPP_INFO(get_logger(), "Loaded URDF robot with %zu DOF", robot_->numDOF());
 
         joint_state_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
             "joint_states", 10,
@@ -42,11 +43,9 @@ public:
             {
                 std::lock_guard lk(joints_mutex_);
                 // assume joint order: base_joint, boom_joint, jib_joint
-                if (msg->position.size() >= 3)
+                if (msg->position.size() == current_joints_.size())
                 {
-                    current_joints_[0] = msg->position[0];
-                    current_joints_[1] = msg->position[1];
-                    current_joints_[2] = msg->position[2];
+                    current_joints_ = msg->position;
                 }
             });
     }
@@ -65,20 +64,25 @@ public:
                     x, y, z);
 
         constexpr double eps = 1e-6;
+        constexpr auto lambda = 0.1;
+        constexpr auto lambdaSq = lambda * lambda;
 
         auto fwd = [this](const std::vector<double>& values)
         {
             return robot_->computeEndEffectorTransform(
-                {static_cast<float>(values[0]),
-                 static_cast<float>(values[1]),
-                 static_cast<float>(values[2])}, false, false);
+                {
+                    static_cast<float>(values[0]),
+                    static_cast<float>(values[1]),
+                    static_cast<float>(values[2])
+                }, false, false);
         };
 
-        auto J = [&fwd, this](const std::vector<double>& values)
+        auto computeJacobian = [&fwd, this](const std::vector<double>& values)
         {
-            const double fd_eps = 1e-4; // some low value
+            const double fd_eps = 1e-6;
+            const int n = static_cast<int>(values.size());
+            Eigen::MatrixXd jacobian(3, n);
 
-            Eigen::Matrix3d jacobian = Eigen::Matrix3d::Zero();
             const auto t1 = fwd(values);
 
             threepp::Vector3 p1, p2;
@@ -87,7 +91,7 @@ public:
             RCLCPP_INFO(KineControlNode::get_logger(), "fwd pos: x=%.6f y=%.6f z=%.6f", p1.x, p1.y,
                         p1.z);
 
-            for (int i = 0; i < 3; ++i)
+            for (int i = 0; i < 3; ++i) // 3 == position, ignore orientation
             {
                 auto vals = values; // copy
                 vals[i] += fd_eps;
@@ -95,6 +99,7 @@ public:
                 const auto t2 = fwd(vals);
                 p2.setFromMatrixPosition(t2);
 
+                // column i : derivative of position wrt joint i
                 jacobian(0, i) = (p2.x - p1.x) / fd_eps;
                 jacobian(1, i) = (p2.y - p1.y) / fd_eps;
                 jacobian(2, i) = (p2.z - p1.z) / fd_eps;
@@ -103,72 +108,75 @@ public:
             return jacobian;
         };
 
-        auto dls = [this](const Eigen::Matrix3d& j, double lambdaSq)
+        auto dls = [lambdaSq](const Eigen::MatrixXd& J) -> Eigen::MatrixXd
         {
-            Eigen::Matrix3d I;
-            I.setIdentity();
+            const int rows = J.rows();
+            const int cols = J.cols();
 
-            const auto jt = j.transpose();
-            const auto jjt = j * jt;
-            const auto plus = I * lambdaSq;
-
-            return jt * ((jjt + plus).inverse());
+            if (rows <= cols)
+            {
+                // J is wide or square (rows <= cols): use J^T * (J J^T + lambda^2 I)^{-1}
+                Eigen::MatrixXd JJt = J * J.transpose();
+                JJt += lambdaSq * Eigen::MatrixXd::Identity(rows, rows);
+                Eigen::MatrixXd inv = JJt.inverse();
+                return J.transpose() * inv; // cols x rows
+            }
+            else
+            {
+                // J is tall (rows > cols): use (J^T J + lambda^2 I)^{-1} * J^T
+                Eigen::MatrixXd JtJ = J.transpose() * J;
+                JtJ += lambdaSq * Eigen::MatrixXd::Identity(cols, cols);
+                Eigen::MatrixXd inv = JtJ.inverse();
+                return inv * J.transpose(); // cols x rows
+            }
         };
 
         std::vector<double> vals;
         {
             std::lock_guard lk(joints_mutex_);
-            vals.push_back(current_joints_[0]);
-            vals.push_back(current_joints_[1]);
-            vals.push_back(current_joints_[2]);
+            vals = current_joints_;
         }
 
         threepp::Vector3 actual;
-        for (int i = 0; i < 100; ++i)
+        for (int iter = 0; iter < 100; ++iter)
         {
             const auto m = fwd(vals);
             actual.setFromMatrixPosition(m);
 
             const float error = actual.distanceTo(target_vector);
             // RCLCPP_INFO(get_logger(), "error=%.3f", error);
-            if (error < eps)
-                break;
+            if (error < eps) break;
 
-            Eigen::Vector3<double> delta{
-                target_vector.x - actual.x,
+            Eigen::Vector3d delta;
+            delta << target_vector.x - actual.x,
                 target_vector.y - actual.y,
-                target_vector.z - actual.z
-            };
+                target_vector.z - actual.z;
 
-            const auto j = J(vals);
-            constexpr auto lambda = 0.1;
-            constexpr auto lambdaSq = lambda * lambda;
-            const auto inv = dls(j, lambdaSq);
-            const auto theta_dot = inv * delta;
+            const auto J = computeJacobian(vals); // 3 x N
+            const auto J_pinv = dls(J); // N x 3
 
-            for (int k = 0; k < 3; ++k)
+            Eigen::VectorXd theta_dot = J_pinv * delta; // N x 1
+
+            const int n = static_cast<int>(vals.size());
+            for (int k = 0; k < n; ++k)
             {
-                vals[k] += static_cast<float>(theta_dot[k]); // scale down for stability
-                // clamp within limits
+                vals[k] += theta_dot(k);
                 vals[k] = robot_->getJointRange(k).clamp(vals[k]);
             }
         }
 
         std_msgs::msg::Float32MultiArray msg;
-        msg.data.resize(3);
-        msg.data[0] = static_cast<float>(vals[0]);
-        msg.data[1] = static_cast<float>(vals[1]);
-        msg.data[2] = static_cast<float>(vals[2]);
+        msg.data.resize(vals.size());
+        for (int i = 0; i < vals.size(); ++i)
+        {
+            msg.data[i] = static_cast<float>(vals[i]);
+        }
         set_joint_pub_->publish(msg);
-
-        RCLCPP_INFO(get_logger(),
-                    "Published IK joints: base=%.3f boom=%.3f jib=%.3f", vals[0],
-                    vals[1], vals[2]);
     }
 
 private:
     std::mutex joints_mutex_;
-    std::array<double, 3> current_joints_{0.0, 0.0, 0.0};
+    std::vector<double> current_joints_;
 
     std::shared_ptr<threepp::Robot> robot_;
 
