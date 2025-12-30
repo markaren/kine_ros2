@@ -33,7 +33,7 @@ public:
             "goal_pose", 10,
             [this](const geometry_msgs::msg::PoseStamped::SharedPtr msg)
             {
-                this->processFeedback2(*msg);
+                this->solveIK(*msg);
             });
 
 
@@ -42,7 +42,6 @@ public:
             [this](const sensor_msgs::msg::JointState::SharedPtr msg)
             {
                 std::lock_guard lk(joints_mutex_);
-                // assume joint order: base_joint, boom_joint, jib_joint
                 if (msg->position.size() == current_joints_.size())
                 {
                     current_joints_ = msg->position;
@@ -50,10 +49,12 @@ public:
             });
     }
 
-    void processFeedback2(
+    // jacobian damped least squared IK solver
+    void solveIK(
         const geometry_msgs::msg::PoseStamped& target)
     {
-        // jacobian damped least squared IK solver
+
+        std::lock_guard lk(goal_mutex_);
 
         double x = target.pose.position.x;
         double y = target.pose.position.y;
@@ -88,7 +89,7 @@ public:
             threepp::Vector3 p1, p2;
             p1.setFromMatrixPosition(t1);
 
-            RCLCPP_INFO(KineControlNode::get_logger(), "fwd pos: x=%.6f y=%.6f z=%.6f", p1.x, p1.y,
+            RCLCPP_INFO(get_logger(), "fwd pos: x=%.6f y=%.6f z=%.6f", p1.x, p1.y,
                         p1.z);
 
             for (int i = 0; i < 3; ++i) // 3 == position, ignore orientation
@@ -161,7 +162,7 @@ public:
             for (int k = 0; k < n; ++k)
             {
                 vals[k] += theta_dot(k);
-                vals[k] = robot_->getJointRange(k).clamp(vals[k]);
+                vals[k] = robot_->getJointRange(k).clamp(static_cast<float>(vals[k]));
             }
         }
 
@@ -176,6 +177,7 @@ public:
 
 private:
     std::mutex joints_mutex_;
+    std::mutex goal_mutex_;
     std::vector<double> current_joints_;
 
     std::shared_ptr<threepp::Robot> robot_;

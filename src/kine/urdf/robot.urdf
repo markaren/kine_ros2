@@ -5,21 +5,21 @@
   <link name="base_link">
     <visual>
       <geometry>
-        <mesh filename="package://kine/meshes/4200.obj"/>
+        <mesh filename="package://kine/meshes/Crane3R/4200.obj"/>
       </geometry>
     </visual>
   </link>
   <link name="boom_link">
     <visual>
       <geometry>
-        <mesh filename="package://kine/meshes/7000.obj"/>
+        <mesh filename="package://kine/meshes/Crane3R/7000.obj"/>
       </geometry>
     </visual>
   </link>
   <link name="jib_link">
     <visual>
       <geometry>
-        <mesh filename="package://kine/meshes/5200.obj"/>
+        <mesh filename="package://kine/meshes/Crane3R/5200.obj"/>
       </geometry>
     </visual>
   </link>

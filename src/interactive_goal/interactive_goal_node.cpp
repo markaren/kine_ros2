@@ -96,7 +96,7 @@ private:
                 goal_pub_->publish(msg);
 
                 // update the marker server so the visual follows user interaction
-                server_->applyChanges();
+                // server_->applyChanges();
             });
     }
 };
