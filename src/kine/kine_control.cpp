@@ -1,5 +1,3 @@
-
-#include <cmath>
 #include <memory>
 #include <mutex>
 
@@ -22,9 +20,10 @@ class KineControlNode : public rclcpp::Node
 public:
     KineControlNode() : Node("kine_control_node")
     {
-        robot_ = loadRobot();
-        current_joints_.resize(robot_->numDOF());
-        RCLCPP_INFO(get_logger(), "Loaded URDF robot with %zu DOF", robot_->numDOF());
+        RCLCPP_INFO(get_logger(),
+                    "hi from controller"
+        );
+
 
         set_joint_pub_ = this->create_publisher<std_msgs::msg::Float32MultiArray>(
             "set_joint_values", 10);
@@ -47,12 +46,30 @@ public:
                     current_joints_ = msg->position;
                 }
             });
+
+        std::string urdf;
+        declare_parameter<std::string>("robot_description", "");
+        get_parameter("robot_description", urdf);
+
+        RCLCPP_INFO(
+            this->get_logger(),
+            "robot_description size: %zu",
+            urdf.size()
+        );
+
+        robot_ = loadRobot(urdf);
+        RCLCPP_INFO(get_logger(), "Loaded URDF robot with %zu DOF", robot_->numDOF());
+
+        std::lock_guard lk(joints_mutex_);
+        current_joints_.resize(robot_->numDOF());
     }
+
 
     // jacobian damped least squared IK solver
     void solveIK(
         const geometry_msgs::msg::PoseStamped& target)
     {
+        RCLCPP_INFO(get_logger(), "solveIK called");
 
         std::lock_guard lk(goal_mutex_);
 

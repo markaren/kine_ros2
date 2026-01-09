@@ -7,24 +7,33 @@
 #include <interactive_markers/interactive_marker_server.hpp>
 #include <visualization_msgs/msg/interactive_marker.hpp>
 #include <visualization_msgs/msg/interactive_marker_control.hpp>
-#include <visualization_msgs/msg/marker.hpp>
 
 class InteractiveGoalNode : public rclcpp::Node
 {
 public:
     InteractiveGoalNode() : Node("interactive_goal_node")
     {
+        goal_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("goal_pose", 10);
+    }
+
+    void setup()
+    {
+        //ros2 info msg
+        RCLCPP_INFO(
+            this->get_logger(),
+            "Interactive Goal Node started"
+        );
+
         server_ =
             std::make_shared<interactive_markers::InteractiveMarkerServer>(
-                "goal_marker_server", this);
-
-        goal_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("goal_pose", 10);
+                "goal_marker_server", shared_from_this());
 
         makeMarker();
         server_->applyChanges();
     }
 
 private:
+    // rclcpp::TimerBase::SharedPtr init_timer_;
     std::shared_ptr<interactive_markers::InteractiveMarkerServer> server_;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr goal_pub_;
 
@@ -94,9 +103,6 @@ private:
                 msg.header.frame_id = frame;
                 msg.pose = feedback->pose;
                 goal_pub_->publish(msg);
-
-                // update the marker server so the visual follows user interaction
-                // server_->applyChanges();
             });
     }
 };
@@ -105,6 +111,7 @@ int main(int argc, char** argv)
 {
     rclcpp::init(argc, argv);
     auto node = std::make_shared<InteractiveGoalNode>();
+    node->setup();
     rclcpp::spin(node);
     rclcpp::shutdown();
     return 0;

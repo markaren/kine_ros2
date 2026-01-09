@@ -1,6 +1,8 @@
 import os
 from launch import LaunchDescription
 from launch_ros.actions import Node
+from launch.actions import RegisterEventHandler
+from launch.event_handlers import OnProcessStart
 from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
@@ -30,9 +32,9 @@ def generate_launch_description():
     kine_env_node = Node(
         package='kine',
         executable='kine_environment',
-        name='kine_envvironment',
+        name='kine_environment',
         output='screen',
-        parameters=[{'use_sim_time': False}]
+        parameters=[{'use_sim_time': False, 'robot_description': robot_description_content}]
     )
 
     kine_controller_node = Node(
@@ -40,7 +42,7 @@ def generate_launch_description():
         executable='kine_control',
         name='kine_control',
         output='screen',
-        parameters=[{'use_sim_time': False}]
+        parameters=[{'use_sim_time': False, 'robot_description': robot_description_content}]
     )
 
     interactive_goal_node = Node(
@@ -51,10 +53,20 @@ def generate_launch_description():
         parameters=[{'use_sim_time': False}]
     )
 
+    evt1 = RegisterEventHandler(
+        OnProcessStart(
+            target_action=rsp_node,
+            on_start=[kine_env_node, kine_controller_node]
+        )
+    )
+
+    evt2 = RegisterEventHandler(
+        OnProcessStart(
+            target_action=kine_env_node,
+            on_start=[interactive_goal_node, rviz_node]
+        )
+    )
+
     return LaunchDescription([
-        rsp_node,
-        rviz_node,
-        kine_env_node,
-        kine_controller_node,
-        interactive_goal_node
+        rsp_node, evt1, evt2
     ])

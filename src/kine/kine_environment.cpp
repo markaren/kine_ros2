@@ -96,6 +96,7 @@ public:
           renderer_(canvas_.size()),
           camera_(75, canvas_.aspect(), 0.1, 1000)
     {
+
         renderer_.autoClear = false;
         camera_.position.set(20, 15, 20);
         scene_.background = Color::aliceblue;
@@ -107,7 +108,17 @@ public:
         light->position.set(1, 1, 1).normalize();
         scene_.add(light);
 
-        robot_ = loadRobot(std::make_shared<OBJLoader>());
+        std::string urdf;
+        declare_parameter<std::string>("robot_description", "");
+        get_parameter("robot_description", urdf);
+
+        RCLCPP_INFO(
+            this->get_logger(),
+            "robot_description size: %zu",
+            urdf.size()
+        );
+
+        robot_ = loadRobot(urdf, std::make_shared<OBJLoader>());
         RCLCPP_INFO(get_logger(), "Loaded URDF robot with %zu DOF", robot_->numDOF());
         robot_->rotation.x = -math::PI / 2; // adjust for threepp coordinate system
 
@@ -214,7 +225,8 @@ public:
         scene_.add(trail);
 
         IOCapture capture{};
-        capture.preventMouseEvent = [] {
+        capture.preventMouseEvent = []
+        {
             return ImGui::GetIO().WantCaptureMouse;
         };
         canvas_.setIOCapture(&capture);
@@ -233,7 +245,8 @@ public:
             bool jointValuesChanged = false;
             for (size_t i = 0; i < jointValues.size(); ++i)
             {
-                jointValuesChanged = jointValuesChanged || ImGui::SliderFloat(jointNames_[i].c_str(), &jointValues[i], limits[i].min, limits[i].max);
+                jointValuesChanged = jointValuesChanged || ImGui::SliderFloat(
+                    jointNames_[i].c_str(), &jointValues[i], limits[i].min, limits[i].max);
             }
             if (jointValuesChanged)
             {
