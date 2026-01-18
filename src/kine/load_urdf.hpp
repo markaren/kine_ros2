@@ -2,8 +2,6 @@
 #ifndef KINE_LOAD_URDF_HPP
 #define KINE_LOAD_URDF_HPP
 
-#include <rclcpp/rclcpp.hpp>
-#include <rclcpp/parameter_client.hpp>
 #include <ament_index_cpp/get_package_share_directory.hpp>
 
 #include <threepp/loaders/URDFLoader.hpp>

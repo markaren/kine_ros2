@@ -20,6 +20,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 
 find_package(Eigen3 REQUIRED)
+find_package(assimp REQUIRED)
 
 include(FetchContent)
 set(THREEPP_BUILD_TESTS OFF)
@@ -27,7 +28,7 @@ set(THREEPP_BUILD_EXAMPLES OFF)
 FetchContent_Declare(
         threepp
         GIT_REPOSITORY https://github.com/markaren/threepp.git
-        GIT_TAG cbac2a9f2f6dc9b0521e4d8cf2fe6a6200c662a4
+        GIT_TAG e3e81a449ff20dfe64a85c48844e06261f25a29b
 )
 FetchContent_MakeAvailable(threepp)
 
@@ -36,7 +37,7 @@ add_subdirectory(${threepp_SOURCE_DIR}/examples/external ${CMAKE_CURRENT_BINARY_
 
 add_executable(kine_environment kine_environment.cpp)
 ament_target_dependencies(kine_environment rclcpp ament_index_cpp std_msgs sensor_msgs)
-target_link_libraries(kine_environment threepp::threepp imgui)
+target_link_libraries(kine_environment threepp::threepp imgui assimp::assimp)
 target_compile_definitions(kine_environment PRIVATE PROJECT_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_executable(kine_control kine_control.cpp)

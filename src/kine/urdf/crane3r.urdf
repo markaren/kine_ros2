@@ -1,13 +1,18 @@
 <?xml version="1.0"?>
 <robot name="crane3r">
   <!-- Links -->
-  <link name="world"/>
   <link name="base_link">
     <visual>
       <geometry>
         <mesh filename="package://kine/meshes/Crane3R/4200.obj"/>
       </geometry>
     </visual>
+    <collision>
+      <origin xyz="0 0 2.1" rpy="0 0 0"/>
+        <geometry>
+            <cylinder length="4.2" radius="0.5"/>
+        </geometry>
+    </collision>
   </link>
   <link name="boom_link">
     <visual>
@@ -15,6 +20,12 @@
         <mesh filename="package://kine/meshes/Crane3R/7000.obj"/>
       </geometry>
     </visual>
+    <collision>
+      <origin xyz="3.5 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="7.0 1 1"/>
+      </geometry>
+    </collision>
   </link>
   <link name="jib_link">
     <visual>
@@ -22,6 +33,12 @@
         <mesh filename="package://kine/meshes/Crane3R/5200.obj"/>
       </geometry>
     </visual>
+    <collision>
+      <origin xyz="2.6 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="5.2 1 1"/>
+      </geometry>
+    </collision>
   </link>
   <link name="end_effector"/>
 
@@ -57,5 +74,12 @@
     <parent link="jib_link"/>
     <child link="end_effector"/>
     <origin xyz="5.2 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="base"/>
+  <joint name="base_link-base" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="base"/>
   </joint>
 </robot>

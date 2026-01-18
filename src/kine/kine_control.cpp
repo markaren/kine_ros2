@@ -20,10 +20,6 @@ class KineControlNode : public rclcpp::Node
 public:
     KineControlNode() : Node("kine_control_node")
     {
-        RCLCPP_INFO(get_logger(),
-                    "hi from controller"
-        );
-
 
         set_joint_pub_ = this->create_publisher<std_msgs::msg::Float32MultiArray>(
             "set_joint_values", 10);
@@ -47,23 +43,21 @@ public:
                 }
             });
 
-        std::string urdf;
         declare_parameter<std::string>("robot_description", "");
-        get_parameter("robot_description", urdf);
+        get_parameter("robot_description", urdf_);
 
         RCLCPP_INFO(
             this->get_logger(),
             "robot_description size: %zu",
-            urdf.size()
+            urdf_.size()
         );
 
-        robot_ = loadRobot(urdf);
+        robot_ = loadRobot(urdf_);
         RCLCPP_INFO(get_logger(), "Loaded URDF robot with %zu DOF", robot_->numDOF());
 
         std::lock_guard lk(joints_mutex_);
         current_joints_.resize(robot_->numDOF());
     }
-
 
     // jacobian damped least squared IK solver
     void solveIK(
@@ -196,6 +190,8 @@ private:
     std::mutex joints_mutex_;
     std::mutex goal_mutex_;
     std::vector<double> current_joints_;
+
+    std::string urdf_;
 
     std::shared_ptr<threepp::Robot> robot_;
 

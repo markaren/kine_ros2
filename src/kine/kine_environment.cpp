@@ -13,6 +13,7 @@
 #include <threepp/renderers/GLRenderTarget.hpp>
 #include <threepp/utils/ImageUtils.hpp>
 #include <threepp/extras/imgui/ImguiContext.hpp>
+#include <threepp/loaders/AssimpLoader.hpp>
 
 #include "load_urdf.hpp"
 
@@ -108,28 +109,15 @@ public:
         light->position.set(1, 1, 1).normalize();
         scene_.add(light);
 
-        std::string urdf;
         declare_parameter<std::string>("robot_description", "");
-        get_parameter("robot_description", urdf);
+        get_parameter("robot_description", urdf_);
 
         RCLCPP_INFO(
             this->get_logger(),
             "robot_description size: %zu",
-            urdf.size()
+            urdf_.size()
         );
 
-        robot_ = loadRobot(urdf, std::make_shared<OBJLoader>());
-        RCLCPP_INFO(get_logger(), "Loaded URDF robot with %zu DOF", robot_->numDOF());
-        robot_->rotation.x = -math::PI / 2; // adjust for threepp coordinate system
-
-        std::vector<float> initialVals;
-        std::ranges::transform(robot_->getJointRanges(), std::back_inserter(initialVals), [](const auto& range)
-        {
-            return range.mid();
-        });
-
-        robot_->setJointValues(initialVals);
-        scene_.add(robot_);
 
         // publisher: publish current joint values as JointState
         joint_pub_ = this->create_publisher<sensor_msgs::msg::JointState>(
@@ -155,11 +143,6 @@ public:
                 robot_->setJointValues(msg->data);
             });
 
-        const auto info = robot_->getArticulatedJointInfo();
-        std::ranges::transform(info, std::back_inserter(jointNames_), [](const auto& ji)
-        {
-            return ji.name;
-        });
 
         // publish joint states at 50 Hz via a ROS timer (runs when executor spins)
         publish_timer_ = this->create_wall_timer(20ms, [this]
@@ -201,10 +184,6 @@ public:
         OrthographicCamera orthoCamera(-1, 1, 1, -1, 1, 10);
         orthoCamera.position.z = 1;
 
-        auto endEffector = robot_->getObjectByName("ee_fixed");
-        virtualCamera.position.set(0, 0, 0);
-        endEffector->add(virtualCamera);
-
         auto cameraHelper = CameraHelper::create(virtualCamera);
         scene_.add(cameraHelper);
 
@@ -217,12 +196,31 @@ public:
 
         OrbitControls controls(camera_, canvas_);
 
-        executor_ = std::make_unique<rclcpp::executors::SingleThreadedExecutor>();
-        executor_->add_node(this->shared_from_this());
-        spin_thread_ = std::thread([this]() { executor_->spin(); });
-
         EndEffectorTrail trail;
         scene_.add(trail);
+
+        robot_ = loadRobot(urdf_, std::make_shared<AssimpLoader>());
+        RCLCPP_INFO(get_logger(), "Loaded URDF robot with %zu DOF", robot_->numDOF());
+        robot_->rotation.x = -math::PI / 2; // adjust for threepp coordinate system
+
+        auto endEffector = robot_->getObjectByName("ee_fixed");
+        virtualCamera.position.set(0, 0, 0);
+        endEffector->add(virtualCamera);
+
+        const auto info = robot_->getArticulatedJointInfo();
+        std::ranges::transform(info, std::back_inserter(jointNames_), [](const auto& ji)
+        {
+            return ji.name;
+        });
+
+        std::vector<float> initialVals;
+        std::ranges::transform(robot_->getJointRanges(), std::back_inserter(initialVals), [](const auto& range)
+        {
+            return range.mid();
+        });
+
+        robot_->setJointValues(initialVals);
+        scene_.add(robot_);
 
         IOCapture capture{};
         capture.preventMouseEvent = []
@@ -231,7 +229,10 @@ public:
         };
         canvas_.setIOCapture(&capture);
 
+        bool showCollisionGeometry = false;
         bool showCameraHelper = true;
+        robot_->showColliders(showCollisionGeometry);
+
         ImguiFunctionalContext ui(canvas_.windowPtr(), [&]
         {
             ImGui::SetNextWindowPos({}, 0, {});
@@ -239,21 +240,34 @@ public:
 
             ImGui::Begin("Settings");
             ImGui::Checkbox("Show Camera Helper", &showCameraHelper);
+            if (ImGui::Checkbox("Show Colliders", &showCollisionGeometry)) {
+                robot_->showColliders(showCollisionGeometry);
+            }
             ImGui::Text("Joint Values:");
             auto jointValues = robot_->jointValues();
             const auto limits = robot_->getJointRanges();
+
             bool jointValuesChanged = false;
             for (size_t i = 0; i < jointValues.size(); ++i)
             {
-                jointValuesChanged = jointValuesChanged || ImGui::SliderFloat(
+                jointValuesChanged = jointValuesChanged | ImGui::SliderFloat(
                     jointNames_[i].c_str(), &jointValues[i], limits[i].min, limits[i].max);
             }
+
+            ImGui::End();
+
+
             if (jointValuesChanged)
             {
                 robot_->setJointValues(jointValues);
             }
-            ImGui::End();
+
         });
+
+        executor_ = std::make_unique<rclcpp::executors::SingleThreadedExecutor>();
+        executor_->add_node(this->shared_from_this());
+        spin_thread_ = std::thread([this]() { executor_->spin(); });
+
 
         Vector3 pos;
         canvas_.animate([&, this]
@@ -289,14 +303,8 @@ public:
 
     ~KineEnvironmentNode() override
     {
-        if (executor_)
-        {
-            executor_->cancel();
-        }
-        if (spin_thread_.joinable())
-        {
-            spin_thread_.join();
-        }
+        if (executor_)executor_->cancel();
+        if (spin_thread_.joinable())spin_thread_.join();
     }
 
 private:
@@ -306,6 +314,8 @@ private:
     Scene scene_;
     std::shared_ptr<Robot> robot_;
     std::vector<std::string> jointNames_;
+
+    std::string urdf_;
 
     rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_pub_;
