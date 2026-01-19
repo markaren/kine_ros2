@@ -8,7 +8,7 @@ def generate_launch_description():
     pkg_share = get_package_share_directory(pkg)
 
     urdf_path = os.path.join(pkg_share, 'urdf', 'crane3r.urdf')
-    srdf_path = os.path.join(pkg_share, 'srdf', 'crane3r.srdf')
+    srdf_path = os.path.join(pkg_share, 'config', 'crane3r.srdf')
     kinematics_path = os.path.join(pkg_share, 'config', 'kinematics.yaml')
     joint_limits_path = os.path.join(pkg_share, 'config', 'joint_limits.yaml')
 
