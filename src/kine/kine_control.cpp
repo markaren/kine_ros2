@@ -72,8 +72,8 @@ public:
         double z = target.pose.position.z;
         threepp::Vector3 target_vector(x, y, z);
 
-        RCLCPP_INFO(get_logger(), "processFeedback2 target: x=%.3f y=%.3f z=%.3f",
-                    x, y, z);
+        // RCLCPP_INFO(get_logger(), "processFeedback2 target: x=%.3f y=%.3f z=%.3f",
+        //             x, y, z);
 
         constexpr double eps = 1e-6;
         constexpr auto lambda = 0.1;
@@ -100,8 +100,8 @@ public:
             threepp::Vector3 p1, p2;
             p1.setFromMatrixPosition(t1);
 
-            RCLCPP_INFO(get_logger(), "fwd pos: x=%.6f y=%.6f z=%.6f", p1.x, p1.y,
-                        p1.z);
+            // RCLCPP_INFO(get_logger(), "fwd pos: x=%.6f y=%.6f z=%.6f", p1.x, p1.y,
+            //             p1.z);
 
             for (int i = 0; i < 3; ++i) // 3 == position, ignore orientation
             {

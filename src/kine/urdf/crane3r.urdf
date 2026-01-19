@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <robot name="crane3r">
   <!-- Links -->
+  <link name="base"/>
   <link name="base_link">
     <visual>
       <geometry>
@@ -44,7 +45,7 @@
 
   <!-- base_joint: rotates about Z between world -> base_link -->
   <joint name="base_joint" type="revolute">
-    <parent link="world"/>
+    <parent link="base"/>
     <child link="base_link"/>
     <origin xyz="0 0 0" rpy="0 0 0"/>
     <axis xyz="0 0 1"/>
@@ -76,10 +77,4 @@
     <origin xyz="5.2 0 0" rpy="0 0 0"/>
   </joint>
 
-  <link name="base"/>
-  <joint name="base_link-base" type="fixed">
-    <origin rpy="0 0 0" xyz="0 0 0"/>
-    <parent link="base_link"/>
-    <child link="base"/>
-  </joint>
 </robot>
