@@ -1,5 +1,5 @@
 <robot name="crane3r">
   <group name="crane">
-    <chain base_link="base_link" tip_link="en_effector"/>
+    <chain base_link="base_link" tip_link="end_effector"/>
   </group>
 </robot>
