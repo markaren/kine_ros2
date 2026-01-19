@@ -6,10 +6,11 @@ from launch.event_handlers import OnProcessStart
 from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
-    pkg = 'kine'
-    pkg_share = get_package_share_directory(pkg)
 
-    urdf_file = os.path.join(pkg_share, 'urdf', 'crane3r.urdf')
+    launch_pkg_share = get_package_share_directory('kine_bringup')
+    robot_pkg_share = get_package_share_directory('kine_robot_description')
+
+    urdf_file = os.path.join(robot_pkg_share, 'urdf', 'crane3r.urdf')
     with open(urdf_file, 'r') as f:
         robot_description_content = f.read()
 
@@ -20,7 +21,8 @@ def generate_launch_description():
         output='screen',
         parameters=[{'robot_description': robot_description_content}]
     )
-    rviz_config_file = os.path.join(pkg_share, 'config', 'display.rviz')
+
+    rviz_config_file = os.path.join(launch_pkg_share, 'config', 'display.rviz')
     rviz_node = Node(
         package='rviz2',
         executable='rviz2',

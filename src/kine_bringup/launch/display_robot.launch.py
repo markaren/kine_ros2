@@ -4,10 +4,8 @@ from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
-    pkg = 'kine'
-    pkg_share = get_package_share_directory(pkg)
 
-    urdf_file = os.path.join(pkg_share, 'urdf', 'crane3r.urdf')
+    urdf_file = os.path.join(get_package_share_directory('kine_robot_description'), 'urdf', 'crane3r.urdf')
     with open(urdf_file, 'r') as f:
         robot_description_content = f.read()
 

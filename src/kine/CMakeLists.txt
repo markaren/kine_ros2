@@ -32,15 +32,18 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(threepp)
 
+#using imgui from threepp examples
 add_subdirectory(${threepp_SOURCE_DIR}/examples/external ${CMAKE_CURRENT_BINARY_DIR}/threepp_examples_external)
 
 
-add_executable(kine_environment kine_environment.cpp)
+add_executable(kine_environment kine_environment.cpp src/KineEnvironment.cpp)
+target_include_directories(kine_environment PUBLIC include)
 ament_target_dependencies(kine_environment rclcpp ament_index_cpp std_msgs sensor_msgs)
 target_link_libraries(kine_environment threepp::threepp imgui assimp::assimp)
 target_compile_definitions(kine_environment PRIVATE PROJECT_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 
-add_executable(kine_control kine_control.cpp)
+add_executable(kine_control kine_control.cpp src/KineControl.cpp)
+target_include_directories(kine_control PUBLIC include)
 ament_target_dependencies(kine_control rclcpp ament_index_cpp std_msgs sensor_msgs geometry_msgs)
 target_link_libraries(kine_control threepp::threepp Eigen3::Eigen)
 
@@ -49,21 +52,5 @@ install(TARGETS
         kine_environment
         DESTINATION lib/${PROJECT_NAME})
 
-install(DIRECTORY meshes
-        DESTINATION share/${PROJECT_NAME}
-)
-
-install(DIRECTORY urdf
-        DESTINATION share/${PROJECT_NAME}
-)
-
-install(
-        DIRECTORY launch
-        DESTINATION share/${PROJECT_NAME}/
-)
-
-install(DIRECTORY config
-        DESTINATION share/${PROJECT_NAME}
-)
 
 ament_package()

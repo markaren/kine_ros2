@@ -4,13 +4,13 @@ from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
-    pkg = 'kine'
-    pkg_share = get_package_share_directory(pkg)
 
-    urdf_path = os.path.join(pkg_share, 'urdf', 'crane3r.urdf')
-    srdf_path = os.path.join(pkg_share, 'config', 'crane3r.srdf')
-    kinematics_path = os.path.join(pkg_share, 'config', 'kinematics.yaml')
-    joint_limits_path = os.path.join(pkg_share, 'config', 'joint_limits.yaml')
+    robot_pkg_share = get_package_share_directory('kine_robot_description')
+
+    urdf_path = os.path.join(robot_pkg_share, 'urdf', 'crane3r.urdf')
+    srdf_path = os.path.join(robot_pkg_share, 'config', 'crane3r.srdf')
+    kinematics_path = os.path.join(robot_pkg_share, 'config', 'kinematics.yaml')
+    joint_limits_path = os.path.join(robot_pkg_share, 'config', 'joint_limits.yaml')
 
     with open(urdf_path, 'r') as f:
         robot_description_content = f.read()

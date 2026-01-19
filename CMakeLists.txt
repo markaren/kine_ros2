@@ -23,7 +23,7 @@ add_subdirectory(src/interactive_goal)
 
 # ---- colcon build target ----
 add_custom_target(colcon_build
-        COMMAND colcon build --packages-select kine interactive_goal --base-paths src --merge-install --event-handlers console_direct+
+        COMMAND colcon build --base-paths src --merge-install --event-handlers console_direct+
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
         USES_TERMINAL
         COMMENT "Running colcon build --merge-install"

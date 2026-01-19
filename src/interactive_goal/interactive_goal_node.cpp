@@ -40,7 +40,7 @@ private:
     void makeMarker() const
     {
         visualization_msgs::msg::InteractiveMarker int_marker;
-        int_marker.header.frame_id = "base_link";
+        int_marker.header.frame_id = "world";
         int_marker.name = "goal_marker";
         int_marker.description = "Drag to set end effector goal";
         int_marker.pose.position.x = 5;
