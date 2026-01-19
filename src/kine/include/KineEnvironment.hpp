@@ -28,14 +28,10 @@ public:
   ~KineEnvironmentNode() override;
 
 private:
-  Canvas canvas_;
-  GLRenderer renderer_;
-  PerspectiveCamera camera_;
-  Scene scene_;
-  std::shared_ptr<Robot> robot_;
-  std::vector<std::string> jointNames_;
 
   std::string urdf_;
+  std::shared_ptr<Robot> robot_;
+  std::vector<std::string> jointNames_;
 
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_pub_;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_pub_;

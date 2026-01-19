@@ -73,27 +73,13 @@ private:
 };
 } // namespace
 
-KineEnvironmentNode::KineEnvironmentNode()
-    : Node("kine_environment_node"), canvas_("Kine environment"),
-      renderer_(canvas_.size()), camera_(75, canvas_.aspect(), 0.1, 1000) {
-
-  renderer_.autoClear = false;
-  camera_.position.set(20, 15, 20);
-  scene_.background = Color::aliceblue;
-
-  const auto grid = GridHelper::create(20, 10, Color::grey, Color::red);
-  scene_.add(grid);
-
-  const auto light = DirectionalLight::create(Color::white);
-  light->position.set(1, 1, 1).normalize();
-  scene_.add(light);
+KineEnvironmentNode::KineEnvironmentNode() : Node("kine_environment_node") {
 
   declare_parameter<std::string>("robot_description", "");
   get_parameter("robot_description", urdf_);
 
   RCLCPP_INFO(this->get_logger(), "robot_description size: %zu", urdf_.size());
 
-  // publisher: publish current joint values as JointState
   joint_pub_ =
       this->create_publisher<sensor_msgs::msg::JointState>("joint_states", 10);
 
@@ -144,6 +130,25 @@ void KineEnvironmentNode::publishImage(int textureSize,
 }
 
 void KineEnvironmentNode::run() {
+
+  Canvas canvas_("Kine Environment");
+
+  GLRenderer renderer_;
+  renderer_.autoClear = false;
+
+  PerspectiveCamera camera_(60, canvas_.aspect(), 0.1, 1000);
+  camera_.position.set(20, 15, 20);
+
+  Scene scene_;
+  scene_.background = Color::aliceblue;
+
+  const auto grid = GridHelper::create(20, 10, Color::grey, Color::red);
+  scene_.add(grid);
+
+  const auto light = DirectionalLight::create(Color::white);
+  light->position.set(1, 1, 1).normalize();
+  scene_.add(light);
+
   Scene orthoScene;
   PerspectiveCamera virtualCamera(90, 1, 1, 1000);
   virtualCamera.rotation.z = -math::PI / 2;

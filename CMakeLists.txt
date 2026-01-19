@@ -19,6 +19,7 @@ find_package(ament_cmake REQUIRED)
 
 # Add each package as a subdirectory
 add_subdirectory(src/kine)
+add_subdirectory(src/kine_vision)
 add_subdirectory(src/interactive_goal)
 
 # ---- colcon build target ----
