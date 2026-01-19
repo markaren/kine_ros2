@@ -7,13 +7,22 @@ def generate_launch_description():
     pkg = 'kine'
     pkg_share = get_package_share_directory(pkg)
 
-    urdf_file = os.path.join(pkg_share, 'urdf', 'crane3r.urdf')
-    with open(urdf_file, 'r') as f:
+    urdf_path = os.path.join(pkg_share, 'urdf', 'crane3r.urdf')
+    srdf_path = os.path.join(pkg_share, 'srdf', 'crane3r.srdf')
+    kinematics_path = os.path.join(pkg_share, 'config', 'kinematics.yaml')
+    joint_limits_path = os.path.join(pkg_share, 'config', 'joint_limits.yaml')
+
+    with open(urdf_path, 'r') as f:
         robot_description_content = f.read()
 
-    srdf_file = os.path.join(pkg_share, 'config', 'crane3r.srdf')
-    with open(srdf_file, 'r') as f:
+    with open(srdf_path, 'r') as f:
         robot_description_semantic_content = f.read()
+
+    with open(kinematics_path, 'r') as f:
+        kinematics_content = f.read()
+
+    with open(joint_limits_path, 'r') as f:
+        joint_limits_content = f.read()
 
     rsp_node = Node(
         package='robot_state_publisher',
@@ -28,7 +37,12 @@ def generate_launch_description():
         executable='move_group',
         name='move_group',
         output='screen',
-        parameters=[{'robot_description': robot_description_content, 'robot_description_semantic': robot_description_semantic_content}]
+        parameters=[
+            {'robot_description': robot_description_content},
+            {'robot_description_semantic': robot_description_semantic_content},
+            {'robot_description_kinematics': kinematics_content},
+            {'robot_description_planning': {'joint_limits': joint_limits_content}}
+        ]
     )
 
     kine_env_node = Node(

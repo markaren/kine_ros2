@@ -1,0 +1,23 @@
+base_joint:
+  has_position_limits: true
+  min_position: -3.1416
+  max_position: 3.1416
+  has_velocity_limits: true
+  max_velocity: 1.0
+  has_acceleration_limits: false
+
+boom_joint:
+  has_position_limits: true
+  min_position: -1.396
+  max_position: 0.0
+  has_velocity_limits: true
+  max_velocity: 1.0
+  has_acceleration_limits: false
+
+jib_joint:
+  has_position_limits: true
+  min_position: 0.69
+  max_position: 2.44
+  has_velocity_limits: true
+  max_velocity: 1.0
+  has_acceleration_limits: false
