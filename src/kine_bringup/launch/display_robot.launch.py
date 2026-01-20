@@ -25,6 +25,14 @@ def generate_launch_description():
         parameters=[{'use_sim_time': False, 'robot_description': robot_description_content}]
     )
 
+    kine_control_node = Node(
+        package='kine',
+        executable='kine_control',
+        name='kine_control',
+        output='screen',
+        parameters=[{'use_sim_time': False, 'robot_description': robot_description_content}]
+    )
+
     vision_node = Node(
         package='kine_vision',
         executable='kine_vision',
@@ -34,5 +42,5 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        rsp_node, kine_env_node, vision_node
+        rsp_node, kine_env_node, kine_control_node, vision_node
     ])

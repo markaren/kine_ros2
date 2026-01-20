@@ -23,7 +23,7 @@ find_package(OpenCV REQUIRED)
 
 add_executable(kine_vision kine_vision.cpp)
 target_include_directories(kine_vision PUBLIC include)
-ament_target_dependencies(kine_vision rclcpp ament_index_cpp std_msgs sensor_msgs)
+ament_target_dependencies(kine_vision rclcpp ament_index_cpp std_msgs sensor_msgs geometry_msgs)
 target_link_libraries(kine_vision ${OpenCV_LIBS})
 
 
