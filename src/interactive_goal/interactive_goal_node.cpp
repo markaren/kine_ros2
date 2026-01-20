@@ -8,16 +8,13 @@
 #include <visualization_msgs/msg/interactive_marker.hpp>
 #include <visualization_msgs/msg/interactive_marker_control.hpp>
 
-class InteractiveGoalNode : public rclcpp::Node
-{
+class InteractiveGoalNode : public rclcpp::Node {
 public:
-    InteractiveGoalNode() : Node("interactive_goal_node")
-    {
+    InteractiveGoalNode() : Node("interactive_goal_node") {
         goal_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("goal_pose", 10);
     }
 
-    void setup()
-    {
+    void setup() {
         //ros2 info msg
         RCLCPP_INFO(
             this->get_logger(),
@@ -25,8 +22,8 @@ public:
         );
 
         server_ =
-            std::make_shared<interactive_markers::InteractiveMarkerServer>(
-                "goal_marker_server", shared_from_this());
+                std::make_shared<interactive_markers::InteractiveMarkerServer>(
+                    "goal_marker_server", shared_from_this());
 
         makeMarker();
         server_->applyChanges();
@@ -37,8 +34,7 @@ private:
     std::shared_ptr<interactive_markers::InteractiveMarkerServer> server_;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr goal_pub_;
 
-    void makeMarker() const
-    {
+    void makeMarker() const {
         visualization_msgs::msg::InteractiveMarker int_marker;
         int_marker.header.frame_id = "world";
         int_marker.name = "goal_marker";
@@ -60,11 +56,11 @@ private:
         control.orientation.z = 0;
         control.name = "rotate_x";
         control.interaction_mode =
-            visualization_msgs::msg::InteractiveMarkerControl::ROTATE_AXIS;
+                visualization_msgs::msg::InteractiveMarkerControl::ROTATE_AXIS;
         int_marker.controls.push_back(control);
         control.name = "move_x";
         control.interaction_mode =
-            visualization_msgs::msg::InteractiveMarkerControl::MOVE_AXIS;
+                visualization_msgs::msg::InteractiveMarkerControl::MOVE_AXIS;
         int_marker.controls.push_back(control);
 
         control.orientation.w = 1;
@@ -73,11 +69,11 @@ private:
         control.orientation.z = 0;
         control.name = "rotate_y";
         control.interaction_mode =
-            visualization_msgs::msg::InteractiveMarkerControl::ROTATE_AXIS;
+                visualization_msgs::msg::InteractiveMarkerControl::ROTATE_AXIS;
         int_marker.controls.push_back(control);
         control.name = "move_y";
         control.interaction_mode =
-            visualization_msgs::msg::InteractiveMarkerControl::MOVE_AXIS;
+                visualization_msgs::msg::InteractiveMarkerControl::MOVE_AXIS;
         int_marker.controls.push_back(control);
 
         control.orientation.w = 1;
@@ -86,18 +82,17 @@ private:
         control.orientation.z = 1;
         control.name = "rotate_z";
         control.interaction_mode =
-            visualization_msgs::msg::InteractiveMarkerControl::ROTATE_AXIS;
+                visualization_msgs::msg::InteractiveMarkerControl::ROTATE_AXIS;
         int_marker.controls.push_back(control);
         control.name = "move_z";
         control.interaction_mode =
-            visualization_msgs::msg::InteractiveMarkerControl::MOVE_AXIS;
+                visualization_msgs::msg::InteractiveMarkerControl::MOVE_AXIS;
         int_marker.controls.push_back(control);
 
         server_->insert(
             int_marker,
             [this, frame = int_marker.header.frame_id](
-            const visualization_msgs::msg::InteractiveMarkerFeedback::ConstSharedPtr& feedback)
-            {
+        const visualization_msgs::msg::InteractiveMarkerFeedback::ConstSharedPtr &feedback) {
                 geometry_msgs::msg::PoseStamped msg;
                 msg.header.stamp = this->now();
                 msg.header.frame_id = frame;
@@ -107,8 +102,7 @@ private:
     }
 };
 
-int main(int argc, char** argv)
-{
+int main(int argc, char **argv) {
     rclcpp::init(argc, argv);
     auto node = std::make_shared<InteractiveGoalNode>();
     node->setup();

@@ -1,4 +1,3 @@
-
 #ifndef KINE_LOAD_URDF_HPP
 #define KINE_LOAD_URDF_HPP
 
@@ -6,8 +5,9 @@
 
 #include <threepp/loaders/URDFLoader.hpp>
 
-inline std::shared_ptr<threepp::Robot> loadRobot(const std::string& urdf, std::shared_ptr<threepp::Loader<threepp::Group>> geometryLoader = nullptr)
-{
+inline std::shared_ptr<threepp::Robot> loadRobot(const std::string &urdf,
+                                                 std::shared_ptr<threepp::Loader<threepp::Group> > geometryLoader =
+                                                         nullptr) {
     threepp::URDFLoader urdfLoader;
     urdfLoader.setGeometryLoader(geometryLoader);
 

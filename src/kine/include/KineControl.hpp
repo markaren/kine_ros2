@@ -1,4 +1,3 @@
-
 #ifndef KINECONTROL_HPP
 #define KINECONTROL_HPP
 
@@ -13,21 +12,19 @@
 #include <threepp/math/MathUtils.hpp>
 #include <threepp/objects/Robot.hpp>
 
-class KineControlNode : public rclcpp::Node
-{
+class KineControlNode : public rclcpp::Node {
 public:
     KineControlNode();
 
-  // jacobian damped least squared IK solver
+    // jacobian damped least squared IK solver
     void solveIK(const geometry_msgs::msg::PoseStamped &target);
 
 private:
     std::mutex joints_mutex_;
     std::mutex goal_mutex_;
-    std::vector<double> current_joints_;
 
     std::string urdf_;
-
+    std::vector<double> current_joints_;
     std::shared_ptr<threepp::Robot> robot_;
 
     rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr set_joint_pub_;
