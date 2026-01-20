@@ -18,6 +18,7 @@ find_package(rclcpp_components REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(kine_msgs REQUIRED)
 
 find_package(Eigen3 REQUIRED)
 find_package(assimp REQUIRED)
@@ -38,13 +39,13 @@ add_subdirectory(${threepp_SOURCE_DIR}/examples/external ${CMAKE_CURRENT_BINARY_
 
 add_executable(kine_environment kine_environment.cpp src/KineEnvironment.cpp)
 target_include_directories(kine_environment PUBLIC include)
-ament_target_dependencies(kine_environment rclcpp ament_index_cpp std_msgs sensor_msgs)
+ament_target_dependencies(kine_environment rclcpp ament_index_cpp std_msgs sensor_msgs geometry_msgs kine_msgs)
 target_link_libraries(kine_environment threepp::threepp imgui assimp::assimp)
 target_compile_definitions(kine_environment PRIVATE PROJECT_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_executable(kine_control kine_control.cpp src/KineControl.cpp)
 target_include_directories(kine_control PUBLIC include)
-ament_target_dependencies(kine_control rclcpp ament_index_cpp std_msgs sensor_msgs geometry_msgs)
+ament_target_dependencies(kine_control rclcpp ament_index_cpp std_msgs sensor_msgs geometry_msgs kine_msgs)
 target_link_libraries(kine_control threepp::threepp Eigen3::Eigen)
 
 install(TARGETS

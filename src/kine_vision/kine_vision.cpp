@@ -18,7 +18,7 @@ public:
         vision_thread_ = std::thread(&KineVisionNode::run, this);
     }
 
-    std::optional<cv::Point> detectSphere(const cv::Mat& img) {
+    std::optional<cv::Point2f> detectSphere(const cv::Mat& img) {
         if (img.empty()) return std::nullopt;
 
         cv::Mat gray;
@@ -100,14 +100,15 @@ public:
                     geometry_msgs::msg::PoseStamped pose;
                     pose.header.stamp = this->now();
                     pose.header.frame_id = "world";
-                    pose.pose.position.x = point->x;
-                    pose.pose.position.y = point->y;
-                    // goal_pose_pub_->publish(pose);
+                    //normalize point to -1,1
+                    pose.pose.position.x = point->x / static_cast<float>(img_ptr->cols);
+                    pose.pose.position.y = point->y / static_cast<float>(img_ptr->rows);
+                    goal_pose_pub_->publish(pose);
 
-                    //draw point
-                    cv::Mat img_copy = *img_ptr;
-                    cv::circle(img_copy, *point, 5, cv::Scalar(0, 255, 0), -1);
-                    cv::imshow(winname, img_copy);
+                    // //draw point
+                    // cv::Mat img_copy = *img_ptr;
+                    // cv::circle(img_copy, *point, 5, cv::Scalar(0, 255, 0), -1);
+                    // cv::imshow(winname, img_copy);
                 }
 
                 cv::imshow(winname, *img_ptr);

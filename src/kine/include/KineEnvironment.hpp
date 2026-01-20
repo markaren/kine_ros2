@@ -10,6 +10,7 @@
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <std_msgs/msg/float32_multi_array.hpp>
+#include <kine_msgs/srv/solve_ik.hpp>
 
 #include <threepp/objects/Robot.hpp>
 
@@ -32,6 +33,7 @@ private:
 
     rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_pub_;
+    rclcpp::Client<kine_msgs::srv::SolveIK>::SharedPtr solve_ik_client_;
 
     rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr joint_sub_;
     rclcpp::TimerBase::SharedPtr publish_timer_;

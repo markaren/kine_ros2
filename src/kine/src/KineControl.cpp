@@ -1,68 +1,60 @@
 #include "KineControl.hpp"
 #include "load_urdf.hpp"
+#include "kine_msgs/srv/solve_ik.hpp"
 
 #include <Eigen/Dense>
 
 
 KineControlNode::KineControlNode() : Node("kine_control_node") {
-    set_joint_pub_ = this->create_publisher<std_msgs::msg::Float32MultiArray>(
-        "set_joint_values", 10);
-
-    goal_pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
-        "goal_pose", 10,
-        [this](const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
-            this->solveIK(*msg);
-        });
-
-    joint_state_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
-        "joint_states", 10,
-        [this](const sensor_msgs::msg::JointState::SharedPtr msg) {
-            std::lock_guard lk(joints_mutex_);
-            if (msg->position.size() == current_joints_.size()) {
-                current_joints_ = msg->position;
+    solve_ik_srv_ = this->create_service<kine_msgs::srv::SolveIK>(
+        "solve_ik",
+        [this](const std::shared_ptr<kine_msgs::srv::SolveIK::Request> req,
+               std::shared_ptr<kine_msgs::srv::SolveIK::Response> res) {
+            auto joints = this->computeIK(req->target, req->joint_values);
+            if (!joints.empty()) {
+                res->success = true;
+                res->joint_values = joints;
+            } else {
+                res->success = false;
             }
         });
 
+    std::string urdf;
     declare_parameter<std::string>("robot_description", "");
-    get_parameter("robot_description", urdf_);
+    get_parameter("robot_description", urdf);
 
-    RCLCPP_INFO(this->get_logger(), "robot_description size: %zu", urdf_.size());
+    RCLCPP_INFO(this->get_logger(), "robot_description size: %zu", urdf.size());
 
-    robot_ = loadRobot(urdf_);
+    robot_ = loadRobot(urdf);
     RCLCPP_INFO(get_logger(), "Loaded URDF robot with %zu DOF", robot_->numDOF());
-
-    std::lock_guard lk(joints_mutex_);
-    current_joints_.resize(robot_->numDOF());
 }
 
-void KineControlNode::solveIK(const geometry_msgs::msg::PoseStamped &target) {
-    RCLCPP_INFO(get_logger(), "solveIK called");
-
-    std::lock_guard lk(goal_mutex_);
+std::vector<float> KineControlNode::computeIK(const geometry_msgs::msg::PoseStamped &target,
+                                              const std::vector<float> &current_values) {
 
     double x = target.pose.position.x;
     double y = target.pose.position.y;
     double z = target.pose.position.z;
     threepp::Vector3 target_vector(x, y, z);
 
-    // RCLCPP_INFO(get_logger(), "processFeedback2 target: x=%.3f y=%.3f z=%.3f",
-    //             x, y, z);
+    RCLCPP_INFO(get_logger(), "solveIK target: x=%.3f y=%.3f z=%.3f",
+                x, y, z);
 
     constexpr double eps = 1e-6;
     constexpr auto lambda = 0.1;
     constexpr auto lambdaSq = lambda * lambda;
 
-    auto fwd = [this](const std::vector<double> &values) {
+    auto fwd = [this](const std::vector<float> &values) {
         return robot_->computeEndEffectorTransform({
-                                                       static_cast<float>(values[0]),
-                                                       static_cast<float>(values[1]),
-                                                       static_cast<float>(values[2])
+                                                       (values[0]),
+                                                       (values[1]),
+                                                       (values[2])
                                                    },
                                                    false, false);
     };
 
-    auto computeJacobian = [&fwd, this](const std::vector<double> &values) {
-        const double fd_eps = 1e-6;
+    auto computeJacobian = [&fwd](const std::vector<float> &values) {
+        constexpr double fd_eps = 1e-6;
         const int n = static_cast<int>(values.size());
         Eigen::MatrixXd jacobian(3, n);
 
@@ -110,10 +102,7 @@ void KineControlNode::solveIK(const geometry_msgs::msg::PoseStamped &target) {
         }
     };
 
-    std::vector<double> vals; {
-        std::lock_guard lk(joints_mutex_);
-        vals = current_joints_;
-    }
+    std::vector<float> vals = current_values;
 
     threepp::Vector3 actual;
     for (int iter = 0; iter < 100; ++iter) {
@@ -136,15 +125,10 @@ void KineControlNode::solveIK(const geometry_msgs::msg::PoseStamped &target) {
 
         const int n = static_cast<int>(vals.size());
         for (int k = 0; k < n; ++k) {
-            vals[k] += theta_dot(k);
-            vals[k] = robot_->getJointRange(k).clamp(static_cast<float>(vals[k]));
+            vals[k] += static_cast<float>(theta_dot(k));
+            vals[k] = robot_->getJointRange(k).clamp(vals[k]);
         }
     }
 
-    std_msgs::msg::Float32MultiArray msg;
-    msg.data.resize(vals.size());
-    for (int i = 0; i < vals.size(); ++i) {
-        msg.data[i] = static_cast<float>(vals[i]);
-    }
-    set_joint_pub_->publish(msg);
+    return vals;
 }

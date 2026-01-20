@@ -42,5 +42,5 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        rsp_node, kine_env_node, kine_control_node, vision_node
+        rsp_node, kine_env_node, kine_control_node
     ])

@@ -73,6 +73,8 @@ KineEnvironmentNode::KineEnvironmentNode() : Node("kine_environment_node") {
         joint_pub_->publish(js);
     });
 
+    solve_ik_client_ = this->create_client<kine_msgs::srv::SolveIK>("solve_ik");
+
     thread_ = std::thread(&KineEnvironmentNode::run, this);
     sem_.acquire(); //wait until ready
 }
@@ -92,6 +94,27 @@ void KineEnvironmentNode::publishImage(int textureSize,
     std::memcpy(img.data.data(), pixels, dataSize);
 
     image_pub_->publish(img);
+}
+
+void makeVirtualCameraLookDown(PerspectiveCamera &virtualCamera, Object3D &parent) {
+    parent.updateMatrixWorld(true); // ensure parent's world transform is current
+
+    // get parent's world quaternion
+    Quaternion parentWorldQuat;
+    parent.getWorldQuaternion(parentWorldQuat);
+
+    Euler worldEuler(-math::PI / 2, 0, Euler().setFromQuaternion(parentWorldQuat).z);
+    Quaternion desiredWorldQuat;
+    desiredWorldQuat.setFromEuler(worldEuler);
+
+    //compute local quaternion
+    parentWorldQuat.invert();
+    Quaternion localQuat = parentWorldQuat.multiply(desiredWorldQuat);
+
+    // apply local quaternion to the camera and update matrices
+    virtualCamera.quaternion.copy(localQuat);
+    virtualCamera.updateMatrix();
+    virtualCamera.updateMatrixWorld(true);
 }
 
 void KineEnvironmentNode::run() {
@@ -114,9 +137,9 @@ void KineEnvironmentNode::run() {
     scene_.add(light);
 
     Scene orthoScene;
-    PerspectiveCamera virtualCamera(120, 1, 0.1, 100);
-    virtualCamera.rotation.z = -math::PI / 2;
-    virtualCamera.rotation.y = -math::PI / 2;
+    PerspectiveCamera virtualCamera(120, 1, 0.1, 20);
+    // virtualCamera.rotation.z = -math::PI / 2;
+    // virtualCamera.rotation.y = -math::PI / 2;
 
     OrthographicCamera orthoCamera(-1, 1, 1, -1, 1, 10);
     orthoCamera.position.z = 1;
@@ -167,6 +190,10 @@ void KineEnvironmentNode::run() {
     bool showCameraHelper = true;
     robot_->showColliders(showCollisionGeometry);
 
+    Vector3 targetPos;
+    std::array<float, 3> targetPosArray{};
+    targetPos.setFromMatrixPosition(robot_->getEndEffectorTransform());
+    targetPos.toArray(targetPosArray);
     ImguiFunctionalContext ui(canvas_.windowPtr(), [&] {
         ImGui::SetNextWindowPos({}, 0, {});
         ImGui::SetNextWindowSize({}, 0);
@@ -188,10 +215,25 @@ void KineEnvironmentNode::run() {
                                        limits[i].min, limits[i].max);
         }
 
+        ImGui::Text("Target Position:");
+        if (ImGui::SliderFloat3("pos", targetPosArray.data(), -10, 10)) {
+            auto request = std::make_shared<kine_msgs::srv::SolveIK::Request>();
+            request->target.pose.position.x = targetPosArray[0];
+            request->target.pose.position.y = targetPosArray[1];
+            request->target.pose.position.z = targetPosArray[2];
+            request->joint_values = jointValues;
+
+            auto future = solve_ik_client_->async_send_request(request);
+            const auto result = future.get();
+            jointValues = result->joint_values;
+            jointValuesChanged = true;
+        }
         ImGui::End();
 
         if (jointValuesChanged) {
             robot_->setJointValues(jointValues);
+            targetPos.setFromMatrixPosition(robot_->getEndEffectorTransform());
+            targetPos.toArray(targetPosArray);
         }
     });
 
@@ -204,6 +246,8 @@ void KineEnvironmentNode::run() {
         const auto dt = clock.getDelta();
 
         target.update(dt);
+
+        makeVirtualCameraLookDown(virtualCamera, *endEffector);
 
         renderer_.clear();
         cameraHelper->visible = false;
@@ -230,7 +274,7 @@ void KineEnvironmentNode::run() {
 
         renderer_.copyTextureToImage(*renderTarget.texture);
 
-        if (imageTimer.getElapsedTime() > 0.05f) {
+        if (imageTimer.getElapsedTime() > 0.1f) {
             auto pixels = renderTarget.texture->image().data();
             flipImage(pixels, 3, textureSize, textureSize);
 

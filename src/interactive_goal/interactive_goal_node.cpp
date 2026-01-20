@@ -30,7 +30,6 @@ public:
     }
 
 private:
-    // rclcpp::TimerBase::SharedPtr init_timer_;
     std::shared_ptr<interactive_markers::InteractiveMarkerServer> server_;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr goal_pub_;
 

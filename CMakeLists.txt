@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.16)
-project(ros2_ws LANGUAGES C CXX)
+set(_ros_prefix "${CMAKE_CURRENT_SOURCE_DIR}/install")
+
+if(EXISTS "${_ros_prefix}")
+    set(CMAKE_PREFIX_PATH
+            "${_ros_prefix};${CMAKE_PREFIX_PATH}"
+            CACHE STRING "CMake prefix path" FORCE
+    )
+endif()
+project(ros2_kine_ws LANGUAGES C CXX)
 
 
 # This file exists ONLY so IDEs (CLion) have a single entry point.
@@ -22,10 +30,12 @@ add_subdirectory(src/kine)
 add_subdirectory(src/kine_vision)
 add_subdirectory(src/interactive_goal)
 
+include_directories(install/include)
+
 # ---- colcon build target ----
 add_custom_target(colcon_build
         COMMAND colcon build --base-paths src --merge-install --event-handlers console_direct+
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
         USES_TERMINAL
-        COMMENT "Running colcon build --merge-install"
+        COMMENT "Running colcon build --merge-install (Windows)"
 )
