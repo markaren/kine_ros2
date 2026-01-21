@@ -46,7 +46,14 @@ KineEnvironmentNode::KineEnvironmentNode() : Node("kine_environment_node") {
             this->create_publisher<sensor_msgs::msg::JointState>("joint_states", 10);
 
     image_pub_ =
-            this->create_publisher<sensor_msgs::msg::Image>("camera_pixels", 10);
+            this->create_publisher<sensor_msgs::msg::Image>("camera_pixels", rclcpp::SensorDataQoS());
+
+    goal_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>("goal_pose", 10,
+        [this](const geometry_msgs::msg::PoseStamped::SharedPtr pose) {
+            RCLCPP_INFO(get_logger(), "Received goal pose: x=%.3f y=%.3f",
+                        pose->pose.position.x,
+                        pose->pose.position.y);
+        });
 
     // subscription: receive 3-element Float32MultiArray to set joint values
     joint_sub_ = this->create_subscription<std_msgs::msg::Float32MultiArray>(
@@ -103,7 +110,7 @@ void makeVirtualCameraLookDown(PerspectiveCamera &virtualCamera, Object3D &paren
     Quaternion parentWorldQuat;
     parent.getWorldQuaternion(parentWorldQuat);
 
-    Euler worldEuler(-math::PI / 2, 0, Euler().setFromQuaternion(parentWorldQuat).z);
+    Euler worldEuler(-math::PI / 2, 0, Euler().setFromQuaternion(parentWorldQuat).z-math::PI/2);
     Quaternion desiredWorldQuat;
     desiredWorldQuat.setFromEuler(worldEuler);
 

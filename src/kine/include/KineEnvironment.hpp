@@ -32,9 +32,11 @@ private:
     std::vector<std::string> jointNames_;
 
     rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_pub_;
+
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_pub_;
     rclcpp::Client<kine_msgs::srv::SolveIK>::SharedPtr solve_ik_client_;
 
+    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
     rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr joint_sub_;
     rclcpp::TimerBase::SharedPtr publish_timer_;
 

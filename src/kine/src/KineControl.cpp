@@ -104,7 +104,7 @@ std::vector<float> KineControlNode::computeIK(const geometry_msgs::msg::PoseStam
         actual.setFromMatrixPosition(m);
 
         const float error = actual.distanceTo(target_vector);
-        RCLCPP_INFO(get_logger(), "error=%.3f", error);
+        // RCLCPP_INFO(get_logger(), "error=%.3f", error);
         if (error < eps)
             break;
 
