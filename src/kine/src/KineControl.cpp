@@ -31,7 +31,6 @@ KineControlNode::KineControlNode() : Node("kine_control_node") {
 
 std::vector<float> KineControlNode::computeIK(const geometry_msgs::msg::PoseStamped &target,
                                               const std::vector<float> &current_values) {
-
     double x = target.pose.position.x;
     double y = target.pose.position.y;
     double z = target.pose.position.z;
@@ -45,12 +44,7 @@ std::vector<float> KineControlNode::computeIK(const geometry_msgs::msg::PoseStam
     constexpr auto lambdaSq = lambda * lambda;
 
     auto fwd = [this](const std::vector<float> &values) {
-        return robot_->computeEndEffectorTransform({
-                                                       (values[0]),
-                                                       (values[1]),
-                                                       (values[2])
-                                                   },
-                                                   false, false);
+        return robot_->computeEndEffectorTransform(values, false, false);
     };
 
     auto computeJacobian = [&fwd](const std::vector<float> &values) {
@@ -110,7 +104,7 @@ std::vector<float> KineControlNode::computeIK(const geometry_msgs::msg::PoseStam
         actual.setFromMatrixPosition(m);
 
         const float error = actual.distanceTo(target_vector);
-        // RCLCPP_INFO(get_logger(), "error=%.3f", error);
+        RCLCPP_INFO(get_logger(), "error=%.3f", error);
         if (error < eps)
             break;
 

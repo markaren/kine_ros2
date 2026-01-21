@@ -5,7 +5,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
-#include <kine_msgs/srv/detail/solve_ik__builder.hpp>
+#include <kine_msgs/srv/solve_ik.hpp>
 
 #include <threepp/objects/Robot.hpp>
 

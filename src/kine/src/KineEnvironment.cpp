@@ -138,8 +138,6 @@ void KineEnvironmentNode::run() {
 
     Scene orthoScene;
     PerspectiveCamera virtualCamera(120, 1, 0.1, 20);
-    // virtualCamera.rotation.z = -math::PI / 2;
-    // virtualCamera.rotation.y = -math::PI / 2;
 
     OrthographicCamera orthoCamera(-1, 1, 1, -1, 1, 10);
     orthoCamera.position.z = 1;
@@ -217,16 +215,18 @@ void KineEnvironmentNode::run() {
 
         ImGui::Text("Target Position:");
         if (ImGui::SliderFloat3("pos", targetPosArray.data(), -10, 10)) {
-            auto request = std::make_shared<kine_msgs::srv::SolveIK::Request>();
+            const auto request = std::make_shared<kine_msgs::srv::SolveIK::Request>();
             request->target.pose.position.x = targetPosArray[0];
-            request->target.pose.position.y = targetPosArray[1];
-            request->target.pose.position.z = targetPosArray[2];
+            request->target.pose.position.y = -targetPosArray[2];
+            request->target.pose.position.z = targetPosArray[1];
             request->joint_values = jointValues;
 
             auto future = solve_ik_client_->async_send_request(request);
             const auto result = future.get();
-            jointValues = result->joint_values;
-            jointValuesChanged = true;
+            if (result->success) {
+                jointValues = result->joint_values;
+                jointValuesChanged = true;
+            }
         }
         ImGui::End();
 
