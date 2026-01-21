@@ -11,7 +11,7 @@ inline std::shared_ptr<threepp::Robot> loadRobot(const std::string &urdf,
     threepp::URDFLoader urdfLoader;
     urdfLoader.setGeometryLoader(geometryLoader);
 
-    const auto share = ament_index_cpp::get_package_share_directory("kine");
+    const auto share = ament_index_cpp::get_package_share_directory("kine_robot_description");
     return urdfLoader.parse(share, urdf);
 }
 
