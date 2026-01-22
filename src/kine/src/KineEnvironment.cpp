@@ -147,8 +147,6 @@ void KineEnvironmentNode::run() {
 
     Scene orthoScene;
     PerspectiveCamera virtualCamera(120, 1, 0.1, 20);
-    // virtualCamera.applyMatrix4(Matrix4().makeRotationX(-math::PI / 2));
-    // virtualCamera.applyMatrix4(Matrix4().makeRotationZ(-math::PI / 2));
     virtualCamera.rotation.x = -math::PI / 2;
     virtualCamera.rotation.z = -math::PI / 2;
 

@@ -35,8 +35,8 @@ public:
             lk.unlock();
 
             if (img_ptr && !img_ptr->empty()) {
-                // const auto point = detectSphere(*img_ptr);
-                // if (point) {
+                const auto point = detectSphere(*img_ptr);
+                if (point) {
                 //     //publish goal
                 //
                 //     geometry_msgs::msg::PoseStamped pose;
@@ -47,11 +47,11 @@ public:
                 //     pose.pose.position.y = point->y / static_cast<float>(img_ptr->rows);
                 //     goal_pose_pub_->publish(pose);
                 //
-                //     // //draw point
-                //     // cv::Mat img_copy = *img_ptr;
-                //     // cv::circle(img_copy, *point, 5, cv::Scalar(0, 255, 0), -1);
-                //     // cv::imshow(winname, img_copy);
-                // }
+                // //draw point
+                // cv::Mat img_copy = *img_ptr;
+                // cv::circle(img_copy, *point, 5, cv::Scalar(0, 255, 0), -1);
+                // cv::imshow(winname, img_copy);
+                }
 
                 cv::imshow(winname, *img_ptr);
             }
