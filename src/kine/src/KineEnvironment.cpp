@@ -48,8 +48,10 @@ KineEnvironmentNode::KineEnvironmentNode() : Node("kine_environment_node") {
     image_pub_ =
             this->create_publisher<sensor_msgs::msg::Image>("camera_pixels", rclcpp::SensorDataQoS());
 
-    goal_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>("goal_pose", 10,
-        [this](const geometry_msgs::msg::PoseStamped::SharedPtr pose) {
+    goal_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
+        "goal_pose", 10,
+        [this](
+    const geometry_msgs::msg::PoseStamped::SharedPtr pose) {
             RCLCPP_INFO(get_logger(), "Received goal pose: x=%.3f y=%.3f",
                         pose->pose.position.x,
                         pose->pose.position.y);
@@ -110,7 +112,7 @@ void makeVirtualCameraLookDown(PerspectiveCamera &virtualCamera, Object3D &paren
     Quaternion parentWorldQuat;
     parent.getWorldQuaternion(parentWorldQuat);
 
-    Euler worldEuler(-math::PI / 2, 0, Euler().setFromQuaternion(parentWorldQuat).z-math::PI/2);
+    Euler worldEuler(-math::PI / 2, 0, Euler().setFromQuaternion(parentWorldQuat).z - math::PI / 2);
     Quaternion desiredWorldQuat;
     desiredWorldQuat.setFromEuler(worldEuler);
 
@@ -145,6 +147,10 @@ void KineEnvironmentNode::run() {
 
     Scene orthoScene;
     PerspectiveCamera virtualCamera(120, 1, 0.1, 20);
+    // virtualCamera.applyMatrix4(Matrix4().makeRotationX(-math::PI / 2));
+    // virtualCamera.applyMatrix4(Matrix4().makeRotationZ(-math::PI / 2));
+    virtualCamera.rotation.x = -math::PI / 2;
+    virtualCamera.rotation.z = -math::PI / 2;
 
     OrthographicCamera orthoCamera(-1, 1, 1, -1, 1, 10);
     orthoCamera.position.z = 1;
@@ -171,9 +177,9 @@ void KineEnvironmentNode::run() {
     RCLCPP_INFO(get_logger(), "Loaded URDF robot with %zu DOF", robot_->numDOF());
     robot_->rotation.x = -math::PI / 2; // adjust for threepp coordinate system
 
-    auto endEffector = robot_->getObjectByName("ee_fixed");
-    virtualCamera.position.set(0, 0, 0);
-    endEffector->add(virtualCamera);
+    // auto endEffector = robot_->getObjectByName("ee_fixed");
+    // virtualCamera.position.set(0, 0, 0);
+    // endEffector->add(virtualCamera);
 
     const auto info = robot_->getArticulatedJointInfo();
     std::ranges::transform(info, std::back_inserter(jointNames_),
@@ -219,6 +225,11 @@ void KineEnvironmentNode::run() {
                     ImGui::SliderFloat(jointNames_[i].c_str(), &jointValues[i],
                                        limits[i].min, limits[i].max);
         }
+        if (jointValuesChanged) {
+            robot_->setJointValues(jointValues);
+            targetPos.setFromMatrixPosition(robot_->getEndEffectorTransform());
+            targetPos.toArray(targetPosArray);
+        }
 
         ImGui::Text("Target Position:");
         if (ImGui::SliderFloat3("pos", targetPosArray.data(), -10, 10)) {
@@ -231,16 +242,12 @@ void KineEnvironmentNode::run() {
             auto future = solve_ik_client_->async_send_request(request);
             const auto result = future.get();
             if (result->success) {
-                jointValues = result->joint_values;
-                jointValuesChanged = true;
+                robot_->setJointValues(result->joint_values);
             }
         }
         ImGui::End();
 
         if (jointValuesChanged) {
-            robot_->setJointValues(jointValues);
-            targetPos.setFromMatrixPosition(robot_->getEndEffectorTransform());
-            targetPos.toArray(targetPosArray);
         }
     });
 
@@ -254,7 +261,10 @@ void KineEnvironmentNode::run() {
 
         target.update(dt);
 
-        makeVirtualCameraLookDown(virtualCamera, *endEffector);
+        virtualCamera.position.setFromMatrixPosition(robot_->getEndEffectorTransform());
+        virtualCamera.position.y -= 0.1;
+        virtualCamera.rotation.z = -math::PI/2 + robot_->getJointValue(0);
+        // makeVirtualCameraLookDown(virtualCamera, *endEffector);
 
         renderer_.clear();
         cameraHelper->visible = false;
