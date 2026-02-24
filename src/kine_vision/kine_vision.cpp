@@ -53,7 +53,7 @@ public:
         cv::findContours(edges, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
 
         double bestScore = 0.0;
-        cv::Point bestCenter(-1, -1);
+        std::optional<cv::Point> bestCenter;
         for (const auto &cnt : contours) {
             double area = cv::contourArea(cnt);
             if (area < 50.0) continue; // ignore tiny contours
