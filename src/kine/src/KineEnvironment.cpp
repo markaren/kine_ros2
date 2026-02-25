@@ -55,6 +55,7 @@ KineEnvironmentNode::KineEnvironmentNode() : Node("kine_environment_node") {
             RCLCPP_INFO(get_logger(), "Received goal pose: x=%.3f y=%.3f",
                         pose->pose.position.x,
                         pose->pose.position.y);
+            xy_target_.set(pose->pose.position.x, pose->pose.position.y);
         });
 
     // subscription: receive 3-element Float32MultiArray to set joint values
@@ -195,6 +196,7 @@ void KineEnvironmentNode::run() {
     capture.preventMouseEvent = [] { return ImGui::GetIO().WantCaptureMouse; };
     canvas_.setIOCapture(&capture);
 
+    bool track = false;
     bool showCollisionGeometry = false;
     bool showCameraHelper = true;
     robot_->showColliders(showCollisionGeometry);
@@ -212,6 +214,14 @@ void KineEnvironmentNode::run() {
         if (ImGui::Checkbox("Show Colliders", &showCollisionGeometry)) {
             robot_->showColliders(showCollisionGeometry);
         }
+        ImGui::Checkbox("Track", &track);
+
+        if (track) {
+            targetPosArray[0] += xy_target_.x / 10;
+            targetPosArray[1] = 6;
+            targetPosArray[2] += xy_target_.y / 10;
+        }
+
         ImGui::Text("Joint Values:");
         auto jointValues = robot_->jointValues();
         const auto limits = robot_->getJointRanges();
@@ -230,7 +240,7 @@ void KineEnvironmentNode::run() {
         }
 
         ImGui::Text("Target Position:");
-        if (ImGui::SliderFloat3("pos", targetPosArray.data(), -10, 10)) {
+        if (ImGui::SliderFloat3("pos", targetPosArray.data(), -10, 10) || track) {
             const auto request = std::make_shared<kine_msgs::srv::SolveIK::Request>();
             request->target.pose.position.x = targetPosArray[0];
             request->target.pose.position.y = -targetPosArray[2];
@@ -244,9 +254,6 @@ void KineEnvironmentNode::run() {
             }
         }
         ImGui::End();
-
-        if (jointValuesChanged) {
-        }
     });
 
     sem_.release(); //notify that we are ready
@@ -261,7 +268,7 @@ void KineEnvironmentNode::run() {
 
         virtualCamera.position.setFromMatrixPosition(robot_->getEndEffectorTransform());
         virtualCamera.position.y -= 0.1;
-        virtualCamera.rotation.z = -math::PI/2 + robot_->getJointValue(0);
+        virtualCamera.rotation.z = -math::PI / 2 + robot_->getJointValue(0);
         // makeVirtualCameraLookDown(virtualCamera, *endEffector);
 
         renderer_.clear();

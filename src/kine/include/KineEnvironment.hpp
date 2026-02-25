@@ -11,6 +11,7 @@
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <std_msgs/msg/float32_multi_array.hpp>
 #include <kine_msgs/srv/solve_ik.hpp>
+#include <threepp/math/Vector2.hpp>
 
 #include <threepp/objects/Robot.hpp>
 
@@ -30,6 +31,8 @@ private:
     std::string urdf_;
     std::shared_ptr<Robot> robot_;
     std::vector<std::string> jointNames_;
+
+    Vector2 xy_target_;
 
     rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_pub_;
 

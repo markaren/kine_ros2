@@ -37,20 +37,22 @@ public:
             if (img_ptr && !img_ptr->empty()) {
                 const auto point = detectSphere(*img_ptr);
                 if (point) {
-                //     //publish goal
-                //
-                //     geometry_msgs::msg::PoseStamped pose;
-                //     pose.header.stamp = this->now();
-                //     pose.header.frame_id = "world";
-                //     //normalize point to -1,1
-                //     pose.pose.position.x = point->x / static_cast<float>(img_ptr->cols);
-                //     pose.pose.position.y = point->y / static_cast<float>(img_ptr->rows);
-                //     goal_pose_pub_->publish(pose);
-                //
-                // //draw point
-                // cv::Mat img_copy = *img_ptr;
-                // cv::circle(img_copy, *point, 5, cv::Scalar(0, 255, 0), -1);
-                // cv::imshow(winname, img_copy);
+                    //publish goal
+
+                    geometry_msgs::msg::PoseStamped pose;
+                    pose.header.stamp = this->now();
+                    pose.header.frame_id = "world";
+                    // normalize pixel coordinates to [-1,1] range
+                    pose.pose.position.x = (point->x / static_cast<float>(img_ptr->cols)) * 2 - 1.0f;
+                    pose.pose.position.y = (point->y / static_cast<float>(img_ptr->rows)) * 2 - 1.0f;
+                    goal_pose_pub_->publish(pose);
+
+                    //draw point
+                    cv::Mat img_copy = *img_ptr;
+                    cv::circle(img_copy, *point, 5, cv::Scalar(0, 255, 0), -1);
+                    cv::imshow(winname, img_copy);
+
+                    // std::cout << point->x << " " << point->y << std::endl;
                 }
 
                 cv::imshow(winname, *img_ptr);
@@ -114,7 +116,7 @@ public:
         cv::findContours(edges, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
 
         double bestScore = 0.0;
-        cv::Point bestCenter(-1, -1);
+        std::optional<cv::Point> bestCenter;
         for (const auto &cnt: contours) {
             double area = cv::contourArea(cnt);
             if (area < 50.0) continue; // ignore tiny contours
